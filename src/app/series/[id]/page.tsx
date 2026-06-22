@@ -3,6 +3,7 @@ import FilmActions from "@/components/FilmActions";
 import { supabase } from "@/lib/supabase";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { getDirectImageUrl } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -66,7 +67,7 @@ export default async function SeriesDetail({ params }: { params: { id: string } 
                   <div className="flex flex-col items-center min-w-[80px]">
                     <div className="w-16 h-16 rounded-full bg-gray-800 border-2 border-accent-gold overflow-hidden mb-2 shadow-lg flex items-center justify-center">
                       {series.director_photo_url ? (
-                        <img src={series.director_photo_url} alt={series.director_name} className="w-full h-full object-cover" />
+                        <img src={getDirectImageUrl(series.director_photo_url)} alt={series.director_name} className="w-full h-full object-cover" />
                       ) : (
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -83,7 +84,7 @@ export default async function SeriesDetail({ params }: { params: { id: string } 
                   <div key={idx} className="flex flex-col items-center min-w-[80px]">
                     <div className="w-16 h-16 rounded-full bg-gray-800 border-2 border-transparent overflow-hidden mb-2 shadow-lg flex items-center justify-center">
                       {actor.photo_url ? (
-                        <img src={actor.photo_url} alt={actor.name} className="w-full h-full object-cover" />
+                        <img src={getDirectImageUrl(actor.photo_url)} alt={actor.name} className="w-full h-full object-cover" />
                       ) : (
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -107,7 +108,7 @@ export default async function SeriesDetail({ params }: { params: { id: string } 
                 <div className="flex gap-4 p-4 rounded-lg bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition-colors">
                   <div className="w-40 aspect-video bg-gray-800 rounded flex-shrink-0 flex items-center justify-center relative overflow-hidden">
                      {series.landscape_poster_url ? (
-                        <img src={series.landscape_poster_url} className="w-full h-full object-cover" />
+                        <img src={getDirectImageUrl(series.landscape_poster_url)} className="w-full h-full object-cover" />
                       ) : (
                         <span className="text-xs text-gray-500">Ep 1</span>
                       )}

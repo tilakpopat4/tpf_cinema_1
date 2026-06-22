@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { getDirectImageUrl } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,7 @@ export default async function SeriesCatalog() {
                   {item.landscape_poster_url ? (
                     <div 
                       className="absolute inset-0 bg-cover bg-center"
-                      style={{ backgroundImage: `url('${item.landscape_poster_url}')` }}
+                      style={{ backgroundImage: `url('${getDirectImageUrl(item.landscape_poster_url)}')` }}
                     />
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center text-gray-600 bg-gray-900 text-sm font-bold">

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { getDirectImageUrl } from "@/lib/utils";
 
 // Force dynamic rendering so it always fetches fresh data from Supabase
 export const dynamic = "force-dynamic";
@@ -29,7 +30,7 @@ export default async function Home() {
           
           <div 
             className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url('${featuredData.landscape_poster_url}')` }}
+            style={{ backgroundImage: `url('${getDirectImageUrl(featuredData.landscape_poster_url)}')` }}
           />
           
           <div className="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full text-center md:text-left">
@@ -87,7 +88,7 @@ export default async function Home() {
                 {item.portrait_poster_url ? (
                   <div 
                     className="absolute inset-0 bg-cover bg-center"
-                    style={{ backgroundImage: `url('${item.portrait_poster_url}')` }}
+                    style={{ backgroundImage: `url('${getDirectImageUrl(item.portrait_poster_url)}')` }}
                   />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center text-gray-600">

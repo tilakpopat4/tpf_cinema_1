@@ -12,6 +12,8 @@ interface VideoPlayerProps {
   synopsis?: string;
 }
 
+import { getDirectImageUrl, extractYouTubeId } from "@/lib/utils";
+
 export default function VideoPlayer({ url, poster, title, director, synopsis }: VideoPlayerProps) {
   const ref = useRef<APITypes>(null);
   const [isPaused, setIsPaused] = useState(true);
@@ -55,6 +57,9 @@ export default function VideoPlayer({ url, poster, title, director, synopsis }: 
     };
   }, []);
 
+  const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
+  const videoSrc = isYouTube ? (extractYouTubeId(url) || url) : url;
+
   return (
     <div className="w-full h-full relative overflow-hidden bg-black" ref={containerRef}>
       
@@ -64,10 +69,10 @@ export default function VideoPlayer({ url, poster, title, director, synopsis }: 
           ref={ref}
           source={{
             type: "video",
-            sources: url.includes("youtube.com") || url.includes("youtu.be") 
+            sources: isYouTube
               ? [
                   {
-                    src: url,
+                    src: videoSrc,
                     provider: "youtube"
                   }
                 ]
@@ -88,7 +93,7 @@ export default function VideoPlayer({ url, poster, title, director, synopsis }: 
                     size: 720,
                   },
                 ],
-            poster: poster,
+            poster: getDirectImageUrl(poster),
           }}
           options={{
             controls: [

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { getDirectImageUrl } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -66,7 +67,7 @@ export default async function Browse() {
                   {film.portrait_poster_url ? (
                     <div 
                       className="absolute inset-0 bg-cover bg-center"
-                      style={{ backgroundImage: `url('${film.portrait_poster_url}')` }}
+                      style={{ backgroundImage: `url('${getDirectImageUrl(film.portrait_poster_url)}')` }}
                     />
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center text-gray-600">
