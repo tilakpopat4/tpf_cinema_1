@@ -53,31 +53,71 @@ export default function AdminDashboard() {
       
       let finalMediaUrl = mediaUrl;
 
-      // Direct Upload to Supabase Storage
+      // Direct Upload to Google Drive
       if (mediaSource === "upload" && videoFile) {
-        setUploadStatus("Uploading video to secure cloud storage. Please do not close this window...");
+        setUploadStatus("Initializing secure Google Drive connection...");
         
-        // Sanitize filename to prevent issues
-        const safeTitle = title.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase() || 'video';
-        const fileExt = videoFile.name.split('.').pop() || 'mp4';
-        const fileName = `${safeTitle}_${Date.now()}.${fileExt}`;
-        
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('movies')
-          .upload(fileName, videoFile, {
-            cacheControl: '3600',
-            upsert: false
-          });
+        // 1. Get Resumable Upload URI
+        const initRes = await fetch('/api/drive/init', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            filename: `${title.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.${videoFile.name.split('.').pop()}`,
+            mimeType: videoFile.type || 'video/mp4'
+          })
+        });
 
-        if (uploadError) {
-          throw new Error("Failed to upload video: " + uploadError.message);
+        if (!initRes.ok) {
+           const err = await initRes.json();
+           throw new Error(err.error || "Failed to initialize Google Drive upload");
         }
 
-        setUploadStatus("Upload complete! Generating public link...");
-        
-        // Get public URL
-        const { data: urlData } = supabase.storage.from('movies').getPublicUrl(fileName);
-        finalMediaUrl = urlData.publicUrl;
+        const { uploadUrl } = await initRes.json();
+
+        setUploadStatus("Uploading video directly to Google Drive. Please do not close this window...");
+
+        // 2. PUT the file to the resumable URL
+        await new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open('PUT', uploadUrl, true);
+          
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+              const percent = Math.round((e.loaded / e.total) * 100);
+              setUploadStatus(`Uploading to Google Drive: ${percent}%`);
+            }
+          };
+
+          xhr.onload = async () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              const response = JSON.parse(xhr.responseText);
+              const fileId = response.id;
+              
+              setUploadStatus("Making video public on Google Drive...");
+              
+              // 3. Finalize upload
+              try {
+                const finalizeRes = await fetch('/api/drive/finalize', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ fileId })
+                });
+
+                if (!finalizeRes.ok) throw new Error("Failed to set public permissions");
+                
+                finalMediaUrl = `gdrive:${fileId}`;
+                resolve(true);
+              } catch(e) {
+                reject(e);
+              }
+            } else {
+              reject(new Error("Google Drive upload failed"));
+            }
+          };
+
+          xhr.onerror = () => reject(new Error("Google Drive upload network error"));
+          xhr.send(videoFile);
+        });
       }
 
       if (!finalMediaUrl && mediaSource !== "upload") {

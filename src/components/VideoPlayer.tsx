@@ -58,7 +58,16 @@ export default function VideoPlayer({ url, poster, title, director, synopsis }: 
   }, []);
 
   const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
-  const videoSrc = isYouTube ? (extractYouTubeId(url) || url) : url;
+  const isGDriveStream = url.startsWith("gdrive:");
+  
+  let videoSrc = url;
+  if (isYouTube) {
+    videoSrc = extractYouTubeId(url) || url;
+  } else if (isGDriveStream) {
+    const fileId = url.replace("gdrive:", "");
+    // Use the NEXT_PUBLIC_GOOGLE_DRIVE_API_KEY for streaming playback
+    videoSrc = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${process.env.NEXT_PUBLIC_GOOGLE_DRIVE_API_KEY || ''}`;
+  }
 
   return (
     <div className="w-full h-full relative overflow-hidden bg-black" ref={containerRef}>
@@ -74,6 +83,14 @@ export default function VideoPlayer({ url, poster, title, director, synopsis }: 
                   {
                     src: videoSrc,
                     provider: "youtube"
+                  }
+                ]
+              : isGDriveStream
+              ? [
+                  {
+                    src: videoSrc,
+                    type: "video/mp4",
+                    size: 1080, // Default assume 1080p for Drive streams
                   }
                 ]
               : [
