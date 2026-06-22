@@ -63,7 +63,9 @@ export default function AdminDashboard() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             filename: `${title.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.${videoFile.name.split('.').pop()}`,
-            mimeType: videoFile.type || 'video/mp4'
+            mimeType: videoFile.type || 'video/mp4',
+            title: title,
+            contentType: type
           })
         });
 

@@ -3,18 +3,46 @@ import { getDriveAccessToken } from '@/lib/gdrive';
 
 export async function POST(req: Request) {
   try {
-    const { filename, mimeType } = await req.json();
-    const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+    const { filename, mimeType, title, contentType } = await req.json();
+    
+    // Choose parent folder based on content type
+    const parentFolderId = contentType === 'series' 
+      ? process.env.GOOGLE_DRIVE_SERIES_FOLDER_ID 
+      : process.env.GOOGLE_DRIVE_FILMS_FOLDER_ID;
 
-    if (!folderId) {
-      return NextResponse.json({ error: 'Missing GOOGLE_DRIVE_FOLDER_ID' }, { status: 500 });
+    if (!parentFolderId) {
+      return NextResponse.json({ error: `Missing environment variable for ${contentType} folder ID` }, { status: 500 });
     }
 
     const token = await getDriveAccessToken();
 
+    // 1. Create the Subfolder
+    const folderMetadata = {
+      name: title || 'Untitled Content',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: [parentFolderId],
+    };
+
+    const folderRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(folderMetadata),
+    });
+
+    if (!folderRes.ok) {
+      throw new Error(`Failed to create subfolder: ${await folderRes.text()}`);
+    }
+
+    const folderData = await folderRes.json();
+    const subfolderId = folderData.id;
+
+    // 2. Initiate Resumable Upload inside the new subfolder
     const metadata = {
       name: filename,
-      parents: [folderId],
+      parents: [subfolderId],
     };
 
     const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable', {
