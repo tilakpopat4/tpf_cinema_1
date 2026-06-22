@@ -7,12 +7,14 @@ import { getDirectImageUrl } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-export default async function SeriesDetail({ params }: { params: { id: string } }) {
+export default async function SeriesDetail({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = await params;
+  
   // Fetch specific series by ID
   const { data: series, error } = await supabase
     .from("content")
     .select("*")
-    .eq("id", params.id)
+    .eq("id", resolvedParams.id)
     .single();
 
   if (error || !series) {

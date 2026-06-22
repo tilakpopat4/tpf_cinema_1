@@ -7,12 +7,14 @@ import { getDirectImageUrl } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-export default async function FilmDetail({ params }: { params: { id: string } }) {
+export default async function FilmDetail({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = await params;
+  
   // Fetch specific film by ID
   const { data: film, error } = await supabase
     .from("content")
     .select("*")
-    .eq("id", params.id)
+    .eq("id", resolvedParams.id)
     .single();
 
   if (error || !film) {
