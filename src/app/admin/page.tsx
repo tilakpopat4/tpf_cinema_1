@@ -23,6 +23,9 @@ export default function AdminDashboard() {
   const [actorName, setActorName] = useState("");
   const [actorPhotoUrl, setActorPhotoUrl] = useState("");
 
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [uploadStatus, setUploadStatus] = useState<string>("");
+
   const [contentList, setContentList] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -44,9 +47,48 @@ export default function AdminDashboard() {
 
   const handlePublish = async () => {
     setIsPublishing(true);
+    setUploadStatus("Starting...");
     try {
       const castMembers = actorName ? [{ name: actorName, photo_url: actorPhotoUrl }] : [];
       
+      let finalMediaUrl = mediaUrl;
+
+      // Direct Upload to Supabase Storage
+      if (mediaSource === "upload" && videoFile) {
+        setUploadStatus("Uploading video to secure cloud storage. Please do not close this window...");
+        
+        // Sanitize filename to prevent issues
+        const safeTitle = title.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase() || 'video';
+        const fileExt = videoFile.name.split('.').pop() || 'mp4';
+        const fileName = `${safeTitle}_${Date.now()}.${fileExt}`;
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('movies')
+          .upload(fileName, videoFile, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (uploadError) {
+          throw new Error("Failed to upload video: " + uploadError.message);
+        }
+
+        setUploadStatus("Upload complete! Generating public link...");
+        
+        // Get public URL
+        const { data: urlData } = supabase.storage.from('movies').getPublicUrl(fileName);
+        finalMediaUrl = urlData.publicUrl;
+      }
+
+      if (!finalMediaUrl && mediaSource !== "upload") {
+        throw new Error("Please provide a media URL.");
+      }
+      if (!finalMediaUrl && mediaSource === "upload" && !videoFile) {
+        throw new Error("Please select a video file to upload.");
+      }
+
+      setUploadStatus("Saving to database...");
+
       const { data, error } = await supabase.from('content').insert([{
         title,
         type,
@@ -56,8 +98,8 @@ export default function AdminDashboard() {
         director_photo_url: directorPhotoUrl,
         landscape_poster_url: landscapePosterUrl,
         portrait_poster_url: portraitPosterUrl,
-        media_source: mediaSource,
-        media_url: mediaUrl,
+        media_source: mediaSource === "upload" ? "mp4" : mediaSource,
+        media_url: finalMediaUrl,
         cast_members: castMembers
       }]);
 
@@ -74,8 +116,10 @@ export default function AdminDashboard() {
       setLandscapePosterUrl("");
       setPortraitPosterUrl("");
       setMediaUrl("");
+      setVideoFile(null);
       setActorName("");
       setActorPhotoUrl("");
+      setUploadStatus("");
       
       // Go back to overview
       setActiveTab("overview");
@@ -268,6 +312,16 @@ export default function AdminDashboard() {
                       type="radio" 
                       name="mediaSource" 
                       className="text-accent-gold focus:ring-accent-gold" 
+                      checked={mediaSource === "upload"}
+                      onChange={() => setMediaSource("upload")}
+                    />
+                    Direct Upload (.MP4)
+                  </label>
+                  <label className="flex items-center gap-2 text-white font-medium cursor-pointer">
+                    <input 
+                      type="radio" 
+                      name="mediaSource" 
+                      className="text-accent-gold focus:ring-accent-gold" 
                       checked={mediaSource === "mp4"}
                       onChange={() => setMediaSource("mp4")}
                     />
@@ -281,24 +335,54 @@ export default function AdminDashboard() {
                       checked={mediaSource === "youtube"}
                       onChange={() => setMediaSource("youtube")}
                     />
-                    YouTube Unlisted Link
+                    YouTube Link
                   </label>
                 </div>
                 
-                <div className="mb-4">
-                  <input type="text" value={mediaUrl} onChange={(e) => setMediaUrl(e.target.value)} className="w-full bg-black border border-white/20 rounded-md px-4 py-3 text-white focus:outline-none focus:border-accent-gold transition-colors" placeholder={mediaSource === "youtube" ? "https://youtube.com/watch?v=..." : "https://.../video.mp4"} />
-                </div>
+                {mediaSource === "upload" ? (
+                  <div className="mb-4">
+                    <div className="border-2 border-dashed border-white/20 rounded-md p-8 text-center bg-black hover:border-accent-gold transition-colors cursor-pointer relative">
+                      <input 
+                        type="file" 
+                        accept="video/mp4,video/webm" 
+                        onChange={(e) => setVideoFile(e.target.files?.[0] || null)} 
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
+                      />
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-gray-500 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      {videoFile ? (
+                        <p className="text-accent-gold font-bold">{videoFile.name} ({(videoFile.size / (1024 * 1024)).toFixed(2)} MB)</p>
+                      ) : (
+                        <p className="text-gray-400">Drag & drop your .mp4 file here, or click to browse</p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mb-4">
+                    <input 
+                      type="text" 
+                      value={mediaUrl} 
+                      onChange={(e) => setMediaUrl(e.target.value)} 
+                      className="w-full bg-black border border-white/20 rounded-md px-4 py-3 text-white focus:outline-none focus:border-accent-gold transition-colors" 
+                      placeholder={mediaSource === "youtube" ? "https://youtube.com/watch?v=..." : "https://.../video.mp4"} 
+                    />
+                  </div>
+                )}
               </div>
 
-              {/* Submit */}
-              <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-white/10">
+              {/* Status & Submit */}
+              <div className="flex flex-col sm:flex-row justify-between items-center mt-8 pt-6 border-t border-white/10">
+                <div className="text-accent-gold font-medium mb-4 sm:mb-0 animate-pulse">
+                  {uploadStatus && <span>{uploadStatus}</span>}
+                </div>
                 <button 
                   type="button" 
                   onClick={handlePublish}
-                  disabled={isPublishing || !title || !mediaUrl || !landscapePosterUrl}
-                  className="px-6 py-2 rounded font-bold bg-accent-gold text-black hover:bg-yellow-600 transition-colors shadow-lg disabled:opacity-50"
+                  disabled={isPublishing || !title || (!mediaUrl && !videoFile) || !landscapePosterUrl}
+                  className="px-6 py-2 rounded font-bold bg-accent-gold text-black hover:bg-yellow-600 transition-colors shadow-lg disabled:opacity-50 w-full sm:w-auto"
                 >
-                  {isPublishing ? "Publishing..." : "Publish Content"}
+                  {isPublishing ? "Processing..." : "Publish Content"}
                 </button>
               </div>
 
