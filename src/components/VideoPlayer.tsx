@@ -114,6 +114,15 @@ export default function VideoPlayer({ url, poster, title, director, synopsis }: 
             quality: { default: 1080, options: [2160, 1080, 720] },
             hideControls: true, 
             keyboard: { focused: true, global: true },
+            youtube: {
+              noCookie: true,
+              rel: 0,
+              showinfo: 0,
+              iv_load_policy: 3,
+              modestbranding: 1,
+              disablekb: 1,
+              playsinline: 1,
+            }
           }}
         />
       </div>
