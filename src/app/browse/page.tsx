@@ -1,7 +1,17 @@
 import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 
-export default function Browse() {
+export const dynamic = "force-dynamic";
+
+export default async function Browse() {
   const genres = ["All", "Short Film", "Feature", "Documentary", "Drama", "Thriller", "Comedy", "Experimental"];
+  
+  // Fetch only Films
+  const { data: films } = await supabase
+    .from("content")
+    .select("*")
+    .eq("type", "Film")
+    .order("created_at", { ascending: false });
   
   return (
     <div className="flex flex-col min-h-screen bg-primary-bg pt-12">
@@ -9,7 +19,7 @@ export default function Browse() {
         {/* Header & Search */}
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
           <div>
-            <h1 className="text-4xl font-serif font-bold text-white mb-2">Browse Catalog</h1>
+            <h1 className="text-4xl font-serif font-bold text-white mb-2">Films Catalog</h1>
             <p className="text-gray-400">Discover independent cinema from across India.</p>
           </div>
           <div className="w-full md:w-72">
@@ -43,33 +53,43 @@ export default function Browse() {
         </div>
 
         {/* Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 mb-16">
-          {[...Array(15)].map((_, i) => (
-            <Link href={`/film/${i + 1}`} key={i} className="group flex flex-col">
-              <div className="relative aspect-[2/3] bg-gray-800 rounded-lg overflow-hidden mb-3 shadow-lg">
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 flex items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-white/80 group-hover:text-accent-gold transition-colors" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-                  </svg>
+        {films && films.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 mb-16">
+            {films.map((film) => (
+              <Link href={`/film/${film.id}`} key={film.id} className="group flex flex-col">
+                <div className="relative aspect-[2/3] bg-gray-800 rounded-lg overflow-hidden mb-3 shadow-lg">
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-white/80 group-hover:text-accent-gold transition-colors" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  {film.portrait_poster_url ? (
+                    <div 
+                      className="absolute inset-0 bg-cover bg-center"
+                      style={{ backgroundImage: `url('${film.portrait_poster_url}')` }}
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-gray-600">
+                      No Poster
+                    </div>
+                  )}
                 </div>
-                <div className="absolute inset-0 flex items-center justify-center text-gray-600">
-                  Poster {i + 1}
-                </div>
-              </div>
-              <h3 className="text-white font-medium text-sm line-clamp-1 group-hover:text-accent-gold transition-colors">
-                Independent Film Title {i + 1}
-              </h3>
-              <p className="text-gray-500 text-xs mt-1">Dir. Filmmaker Name</p>
-            </Link>
-          ))}
-        </div>
+                <h3 className="text-white font-medium text-sm line-clamp-1 group-hover:text-accent-gold transition-colors">
+                  {film.title}
+                </h3>
+                {film.director_name && (
+                  <p className="text-gray-500 text-xs mt-1">Dir. {film.director_name}</p>
+                )}
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-20 bg-white/5 rounded-lg border border-white/10 mb-16">
+            <h3 className="text-xl font-bold text-white mb-2">No Films Found</h3>
+            <p className="text-gray-400">There are no films available in the database yet.</p>
+          </div>
+        )}
         
-        {/* Load More */}
-        <div className="flex justify-center mb-20">
-          <button className="border border-white/20 text-white px-8 py-3 rounded hover:bg-white/5 transition-colors font-medium">
-            Load More Films
-          </button>
-        </div>
       </div>
     </div>
   );

@@ -1,36 +1,67 @@
 import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 
-export default function Home() {
+// Force dynamic rendering so it always fetches fresh data from Supabase
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  // Fetch the latest featured content (just picking the newest one)
+  const { data: featuredData } = await supabase
+    .from("content")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  // Fetch the 5 most recent arrivals
+  const { data: newArrivals } = await supabase
+    .from("content")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(5);
+
   return (
     <div className="flex flex-col min-h-screen">
       {/* Hero Section */}
-      <section className="relative w-full h-[70vh] min-h-[500px] flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-10" />
-        {/* Placeholder for Hero Image/Video */}
-        <div className="absolute inset-0 bg-gray-900 flex items-center justify-center">
-          <span className="text-gray-600">Hero Artwork Placeholder</span>
-        </div>
-        
-        <div className="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full text-center md:text-left">
-          <span className="inline-block px-3 py-1 bg-deep-red text-white text-xs font-bold uppercase tracking-wider rounded-sm mb-4">
-            Featured Premiere
-          </span>
-          <h1 className="text-4xl md:text-6xl font-serif font-bold text-white mb-4 drop-shadow-lg">
-            The Indie Filmmaker&apos;s Dream
-          </h1>
-          <p className="text-lg md:text-xl text-gray-200 max-w-2xl mb-8 drop-shadow-md">
-            Watch groundbreaking short films, documentaries, and features from emerging Indian talent. Zero algorithms. Just pure cinema.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 md:justify-start justify-center">
-            <button className="bg-accent-gold hover:bg-yellow-600 text-black px-8 py-3 rounded-md font-bold text-lg transition-transform hover:scale-105">
-              Watch Now
-            </button>
-            <button className="bg-white/10 hover:bg-white/20 text-white backdrop-blur-sm border border-white/20 px-8 py-3 rounded-md font-bold text-lg transition-colors">
-              More Info
-            </button>
+      {featuredData ? (
+        <section className="relative w-full h-[70vh] min-h-[500px] flex items-center justify-center overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-10" />
+          
+          <div 
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url('${featuredData.landscape_poster_url}')` }}
+          />
+          
+          <div className="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full text-center md:text-left">
+            <span className="inline-block px-3 py-1 bg-deep-red text-white text-xs font-bold uppercase tracking-wider rounded-sm mb-4">
+              Featured Premiere
+            </span>
+            <h1 className="text-4xl md:text-6xl font-serif font-bold text-white mb-4 drop-shadow-lg">
+              {featuredData.title}
+            </h1>
+            <p className="text-lg md:text-xl text-gray-200 max-w-2xl mb-8 drop-shadow-md line-clamp-3">
+              {featuredData.synopsis}
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 md:justify-start justify-center">
+              <Link 
+                href={featuredData.type === "Film" ? `/film/${featuredData.id}` : `/series/${featuredData.id}`}
+                className="bg-accent-gold hover:bg-yellow-600 text-black px-8 py-3 rounded-md font-bold text-lg transition-transform hover:scale-105 inline-block text-center"
+              >
+                Watch Now
+              </Link>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      ) : (
+        <section className="relative w-full h-[70vh] min-h-[500px] flex items-center justify-center overflow-hidden bg-gray-900">
+          <div className="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full text-center">
+             <h1 className="text-4xl md:text-6xl font-serif font-bold text-gray-500 mb-4">
+              Welcome to TPF Cinemas
+            </h1>
+            <p className="text-gray-400">Your database is currently empty. Upload content via the Admin Portal.</p>
+          </div>
+        </section>
+      )}
 
       {/* Genre Row Placeholder */}
       <section className="py-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
@@ -41,19 +72,36 @@ export default function Home() {
           </Link>
         </div>
         
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="group relative aspect-[2/3] bg-gray-800 rounded-lg overflow-hidden cursor-pointer transition-transform duration-300 hover:scale-105 hover:z-10 shadow-lg">
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 flex flex-col justify-end p-4">
-                <h3 className="text-white font-bold text-sm">Short Film Title {i}</h3>
-                <p className="text-gray-300 text-xs">Dir. Filmmaker Name</p>
-              </div>
-              <div className="absolute inset-0 flex items-center justify-center text-gray-600">
-                Poster {i}
-              </div>
-            </div>
-          ))}
-        </div>
+        {newArrivals && newArrivals.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {newArrivals.map((item) => (
+              <Link 
+                key={item.id} 
+                href={item.type === "Film" ? `/film/${item.id}` : `/series/${item.id}`}
+                className="group relative aspect-[2/3] bg-gray-800 rounded-lg overflow-hidden cursor-pointer transition-transform duration-300 hover:scale-105 hover:z-10 shadow-lg block"
+              >
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 flex flex-col justify-end p-4">
+                  <h3 className="text-white font-bold text-sm">{item.title}</h3>
+                  {item.director_name && <p className="text-gray-300 text-xs">Dir. {item.director_name}</p>}
+                </div>
+                {item.portrait_poster_url ? (
+                  <div 
+                    className="absolute inset-0 bg-cover bg-center"
+                    style={{ backgroundImage: `url('${item.portrait_poster_url}')` }}
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center text-gray-600">
+                    No Poster
+                  </div>
+                )}
+              </Link>
+            ))}
+          </div>
+        ) : (
+           <div className="text-center py-10 bg-white/5 rounded-lg border border-white/10">
+              <p className="text-gray-500">No content available yet.</p>
+           </div>
+        )}
       </section>
       
       {/* Submit Call to Action */}
