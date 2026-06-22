@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 
 export default function AdminDashboard() {
@@ -22,6 +22,25 @@ export default function AdminDashboard() {
   
   const [actorName, setActorName] = useState("");
   const [actorPhotoUrl, setActorPhotoUrl] = useState("");
+
+  const [contentList, setContentList] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch content on load or after publish
+  const fetchContent = async () => {
+    setIsLoading(true);
+    const { data, error } = await supabase.from('content').select('*').order('created_at', { ascending: false });
+    if (!error && data) {
+      setContentList(data);
+    }
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    if (activeTab === "overview") {
+      fetchContent();
+    }
+  }, [activeTab]);
 
   const handlePublish = async () => {
     setIsPublishing(true);
@@ -57,6 +76,9 @@ export default function AdminDashboard() {
       setMediaUrl("");
       setActorName("");
       setActorPhotoUrl("");
+      
+      // Go back to overview
+      setActiveTab("overview");
       
     } catch (error: any) {
       alert("Error publishing content: " + error.message);
@@ -96,7 +118,40 @@ export default function AdminDashboard() {
           <div className="space-y-8">
             <div className="bg-white/5 border border-white/10 rounded-xl p-8 text-center">
                <h3 className="text-xl font-bold text-white mb-2">Supabase Connected</h3>
-               <p className="text-gray-400">Navigate to the "+ New Content" tab to upload real data to your database.</p>
+               <p className="text-gray-400 mb-6">Navigate to the "+ New Content" tab to upload real data to your database.</p>
+            </div>
+            
+            <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+              <div className="px-6 py-4 border-b border-white/10 bg-black/50 flex justify-between items-center">
+                <h3 className="text-lg font-bold text-white">Database Contents ({contentList.length})</h3>
+                <button onClick={fetchContent} className="text-xs bg-white/10 hover:bg-white/20 text-white px-3 py-1 rounded transition-colors">Refresh</button>
+              </div>
+              <table className="w-full text-left text-sm text-gray-400">
+                <thead className="bg-white/5 text-xs uppercase font-medium">
+                  <tr>
+                    <th className="px-6 py-3">Title</th>
+                    <th className="px-6 py-3">Type</th>
+                    <th className="px-6 py-3">Director</th>
+                    <th className="px-6 py-3">Uploaded</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {isLoading ? (
+                    <tr><td colSpan={4} className="px-6 py-8 text-center">Loading data from Supabase...</td></tr>
+                  ) : contentList.length === 0 ? (
+                    <tr><td colSpan={4} className="px-6 py-8 text-center">No content found in database.</td></tr>
+                  ) : (
+                    contentList.map((item) => (
+                      <tr key={item.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                        <td className="px-6 py-4 font-bold text-white">{item.title}</td>
+                        <td className="px-6 py-4">{item.type}</td>
+                        <td className="px-6 py-4">{item.director_name}</td>
+                        <td className="px-6 py-4">{new Date(item.created_at).toLocaleDateString()}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
